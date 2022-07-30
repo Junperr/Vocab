@@ -11,9 +11,9 @@ import os
 import sys
 import time
 
-data_base_path='C:/Users/Xtrem/OneDrive/Documents/~Info/Own_quizzlet/'
+current_dir = os.getcwd()
 
-conn=sql.connect(data_base_path + 'training.db')
+conn=sql.connect(current_dir + '/training.db')
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -196,7 +196,7 @@ def look_for_trad(languages,word):
     return t,pos1,pos11,pos2,test,len(test),test2,len(test2)
 
 def add_word(w,L):
-    conn = sql.connect(data_base_path + 'training.db')
+    conn = sql.connect(current_dir + '/training.db')
     cursor = conn.cursor()
     # print("""
     #     Insert Into {}  (word) Values ('{}')
@@ -229,7 +229,7 @@ def add_trad(ida,idb,La,Lb):
     None.
 
     """
-    conn=sql.connect(data_base_path + 'training.db')
+    conn=sql.connect(current_dir + '/training.db')
     cursor = conn.cursor()
     # print(f"""
     #     Insert Into {La}_{Lb}  (id_{La},id_{Lb}) Values ({ida},'{idb}')
@@ -269,7 +269,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
     """
     
     print(original_word,""" is already translated to :""")
-    conn=sql.connect(data_base_path + 'training.db')
+    conn=sql.connect(current_dir + '/training.db')
     cursor = conn.cursor()
     old_id_str = cursor.execute(f"""
                     Select id_{Lb} from {La}_{Lb}
@@ -282,7 +282,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
     # we keep the original string for + section
     
     for i in range (0,len(old_id)) :
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         word_id = cursor.execute(f"""
                         Select word from {Lb}
@@ -305,7 +305,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
         
     if answer2 == 'r':
         
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         cursor.execute(f"""
                         Update {La}_{Lb} Set id_{Lb} = '{idb}'
@@ -350,7 +350,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
             else:
                 new_trad = idb
                 
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         cursor.execute(f"""
                         Update {La}_{Lb} Set id_{Lb} = '{new_trad}'
@@ -361,8 +361,8 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
         conn.close()
     return new_trad,old_id_str
 
-test_csv = 'C:/Users/Xtrem/OneDrive/Documents/~Info/Own_quizzlet/list_of_words.txt'
-verif_csv = 'C:/Users/Xtrem/OneDrive/Documents/~Info/Own_quizzlet/test_words.txt'
+test_csv = current_dir + '/list_of_words.txt'
+verif_csv = current_dir + '/test_words.txt'
 
 def stat_maindecomp(C_main):
     trads = C_main.split(',')
@@ -381,7 +381,7 @@ def stat_maindecomp(C_main):
 
 def stat_train_updater(original_word,La,Lb,ida,trad):
     try:
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         cursor.execute(f"""
             Insert Into train  (l_a,l_b,id_a,id_b) Values ('{La}','{Lb}',{ida},'{trad}')
@@ -393,7 +393,7 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
         conn.close()
         print(f'{original_word} is already in the training set.',
         'his translations and stats will be updated',sep='\n')
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         id_trad = cursor.execute(f"""
                         Select id_trad From train
@@ -429,7 +429,7 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
         conn.commit()
         conn.close()
     else:
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         id_trad = cursor.execute(f"""
             Select id_trad From train
@@ -509,7 +509,7 @@ def post(source):
                     # if we change main translation
                     l_word[1],l_word[answer1]=l_word[answer1],l_word[1]
                 
-                conn=sql.connect(data_base_path + 'training.db')
+                conn=sql.connect(current_dir + '/training.db')
                 cursor = conn.cursor()
                 ida = cursor.execute(f"""
                                      Select id from {La} 
@@ -525,7 +525,7 @@ def post(source):
                                      Select id from {Lb} 
                                      Where word = '{l_word[i]}'
                                          """)
-                    conn=sql.connect(data_base_path + 'training.db')
+                    conn=sql.connect(current_dir + '/training.db')
                     cursor = conn.cursor()
                     idb = idb + str(cursor.execute(f"""
                                      Select id from {Lb} 
@@ -542,7 +542,7 @@ def post(source):
                 try:
                     # we do not use add_trad because there was issues
                     # with the closing of the db due to the error handling
-                    conn=sql.connect(data_base_path + 'training.db')
+                    conn=sql.connect(current_dir + '/training.db')
                     cursor = conn.cursor()
                     cursor.execute(f"""
                         Insert Into {La}_{Lb}  (id_{La},id_{Lb}) Values ({ida},'{idb}')
@@ -591,7 +591,7 @@ def score_1(l):
         Score on a translation
 
     """
-    l=l.split(',')[:-1]
+    l=l.split(',')[:-1][::-1] #[:-1:-1] do not work 
     s=[0]
     streak = 0
     in_streak = True
@@ -682,7 +682,7 @@ def false_update(current):
     return current
 
 def train(n):
-    conn=sql.connect(data_base_path + 'training.db')
+    conn=sql.connect(current_dir + '/training.db')
     cursor = conn.cursor()
     rows1 = cursor.execute(f"""
         Select l_a,l_b,id_a,id_b,C_main,C_other,Total,Lastones,status,t.id_trad
@@ -701,14 +701,28 @@ def train(n):
     conn.commit()
     conn.close()
     random.shuffle(rows1)
-    rows= rows1+rows2
+    rows = rows1 + rows2
     i=0
     while i < n:
+        if i == len(rows1):
+            conn=sql.connect(current_dir + '/training.db')
+            cursor = conn.cursor()
+            still_pasttime = cursor.execute(f"""
+                Select l_a,l_b,id_a,id_b,C_main,C_other,Total,Lastones,status,t.id_trad
+                from train As t Join stats As s 
+                On t.id_trad = s.id_trad
+                Where next_revision < {time.time()}
+                           """).fetchall()
+            if still_pasttime != []:
+                train(n-i)
+            conn.commit()
+            conn.close()
+            print("")
         if i >= len(rows):
             return train (n-i) 
         #this allow 
         current = list(rows[i])
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         original_word = cursor.execute(f"""
                 Select word From {current[0]}
@@ -753,7 +767,7 @@ def train(n):
             current = right_update(current, ind_trad)
             print(current)
         #@todo current is now well updated, need to update rows in stats
-        conn=sql.connect(data_base_path + 'training.db')
+        conn=sql.connect(current_dir + '/training.db')
         cursor = conn.cursor()
         cursor.execute(f"""
                 Update stats 
@@ -766,20 +780,14 @@ def train(n):
         print('\n')
         i+=1
     print('training ended')
-"""
-ideas 
-    -add filter for the training 
-    (select different status wanted (usefull onlywith real app))
-    -make competitive feature to encourage players
-    -Intégré des tables prédéfinie et la possibilité de faire des tables personnalisé
-Pour ça une table contenant le nom de la table pq pas La et Lb et les id trad de chacun des mots de la tables
-Pb ya pas de is in dans les requêtes sql
-Et id_trad = row in train
-Or pour des table prefaite on ne voudrait pas
-"""
+
+def QCM_train(n, x=4):
+    
+    pass
+
 #%%
 # this cell show current state of the db (the 5 first row of each table)
-conn=sql.connect(data_base_path + 'training.db')
+conn=sql.connect(current_dir + '/training.db')
 cursor = conn.cursor()
 
 table = {}
