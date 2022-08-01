@@ -1,0 +1,20 @@
+Languages abbreviation
+
+English : eng
+French : fr
+Spanish : spn
+Japanese : jp
+Korean : kr
+Chinese : chn
+German : gr
+Dutch : dth
+Swedish : sw
+Russian : ru
+Portuguese : prt
+Polis : pl
+Romanian : rn
+Czech : cz
+Greek : gr
+Turkish : trk
+Icelendic : ice
+Other : na
