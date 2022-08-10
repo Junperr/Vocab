@@ -14,7 +14,8 @@ Portuguese : prt
 Polis : pl
 Romanian : rn
 Czech : cz
-Greek : gr
+Greek : grk
 Turkish : trk
 Icelendic : ice
+Arabic : ar
 Other : na

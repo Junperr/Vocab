@@ -17,7 +17,7 @@ conn=sql.connect(current_dir + '/training2.db')
 cursor = conn.cursor()
 
 lg_code = ['eng','fr','spn','jp','kr','chn','gr','dth','sw','ru','prt','pl',\
-          'rn','cz','gr','trk','ice','na']
+          'rn','cz','grk','trk','ice','ar','na']
 
 for x in lg_code:
     
