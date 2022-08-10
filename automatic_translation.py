@@ -79,7 +79,7 @@ website = 'https://www.wordreference.com/enfr/turkey'
 # website = 'https://www.wordreference.com/enfr/mess'
 # print(lookfor_trads(website))
 
-default_dic = {'frword':'', 'toword':[], 'meaning':'', 'frex':'', 'toex':''}
+default_dic = {'frword':'', 'toword':[], 'meaning':'', 'frex':'', 'toex':'', 'charac':{}}
 
 def eng_toword_chn(containers):
     Toword = containers.find_elements(by="xpath",\
@@ -165,7 +165,8 @@ def all_details(La,Lb,word):
     # return containers
     current_trad = default_dic.copy()
     current_trad["toword"] = []
-    # print("check 1",containers)
+    current_trad["charac"] = {}
+    
     for i in range (len(containers)):
         # print("check 2")
         is_new_trad = containers[i].get_attribute('id') != ''
@@ -176,6 +177,7 @@ def all_details(La,Lb,word):
             sep_trad.append(current_trad)    
             current_trad = default_dic.copy()
             current_trad["toword"] = []
+            current_trad["charac"] = {}
             Frword = containers[i].find_element(by="xpath",\
                                             value="./td[@class='FrWrd']/strong" ).text
             # Frword contain the word we translate
@@ -220,7 +222,25 @@ def all_details(La,Lb,word):
                 current_trad['meaning'] = meaning
                 for x in Toword:
                     current_trad['toword'].append(x)
-            else:# if it's complent on the tard (examples of sentences using the words)
+            else:# if it's complement on the tard (examples of sentences using the words)
+                try:
+                    if La == 'chn' or Lb == 'chn':
+                        add_toword = cut_multi_trad(eng_toword_chn(containers[i]))
+                    
+                    else:
+                        add_toword = cut_multi_trad(cut_first_charx(containers[i].find_element(by="xpath",\
+                                            value="./td[@class='ToWrd']" ).get_attribute("innerHTML"), x='<', avoid = '\r')[0])
+                except:pass
+                else:
+                    
+                    try:
+                        characs = containers[i].find_element(by="xpath",\
+                                                    value="./td[@class='To2']/span" ).text
+                    except:pass
+                    else:
+                        for x in add_toword:
+                            current_trad['charac'][len(current_trad["toword"])] = characs
+                            current_trad["toword"].append(x)
                 try:
                     Frex = cut_spaces(containers[i].find_element(by="xpath",\
                                           value="./td[@class='FrEx']").text)
@@ -241,18 +261,21 @@ def all_details(La,Lb,word):
             print(f'{x["frword"]} \nwith the meaning of {suppr_parenthesis(x["meaning"])}',
               f'is translated to {x["toword"][0]}',sep='\n')
             if x["frex"] != '' or x["toex"] != '':
-                print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}')
+                print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}\n')
             else:
-                print("Word reference do not provide example for this translation")
+                print("Word reference do not provide example for this translation\n")
         else:
             print(f'{x["frword"]} \nwith the meaning of {suppr_parenthesis(x["meaning"])}',
               'is translated to:',sep='\n')
             for t in range(len(x["toword"])):
-                print(f"{t+1}) {x['toword'][t]}")
+                if x["charac"].get(t) != None:
+                    print(f"{t+1}) {x['toword'][t]} with the nuance of {x['charac'].get(t)}")
+                else:
+                    print(f"{t+1}) {x['toword'][t]}")
             if x["frex"] != '' or x["toex"] != '':
-                print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}','')
+                print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}\n')
             else:
-                print("Wordreference do not provide example for this translation")
+                print("Wordreference do not provide example for this translation\n")
     # print(default_dic)
 
 # all_details(website)
