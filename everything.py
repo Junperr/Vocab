@@ -13,45 +13,32 @@ import time
 
 current_dir = os.getcwd()
 
-conn=sql.connect(current_dir + '/training.db')
+conn=sql.connect(current_dir + '/training2.db')
 cursor = conn.cursor()
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS eng(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    word TEXT NOT NULL,
-    UNIQUE (word)) 
-    """)
+lg_code = ['eng','fr','spn','jp','kr','chn','gr','dth','sw','ru','prt','pl',\
+          'rn','cz','grk','trk','ice','ar','na']
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS fr(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    word TEXT NOT NULL,
-    UNIQUE (word))
-    """)
+for x in lg_code:
     
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS eng_fr(
-    id_eng INTEGER PRIMARY KEY,
-    id_fr TEXT NOT NULL) 
-               """)
-               
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS fr_eng(
-    id_eng TEXT NOT NULL,
-    id_fr INTEGER PRIMARY KEY) 
-               """)
+    cursor.execute(f"""
+    CREATE TABLE IF NOT EXISTS {x}(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word TEXT NOT NULL,
+        UNIQUE (word)) 
+        """)
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS train(
+CREATE TABLE IF NOT EXISTS trad(
     id_trad INTEGER PRIMARY KEY AUTOINCREMENT,
-    l_a TEXT NOT NULL,
-    l_b TEXT NOT NULL,
-    id_a INTEGER NOT NULL,
-    id_b TEXT,
-    UNIQUE (l_a,id_a))
+    la TEXT NOT NULL,
+    lb TEXT NOT NULL,
+    ida INTEGER NOT NULL,
+    idb TEXT,
+    groups TEXT,
+    UNIQUE (la,lb,ida))
     """)
-    
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS stats(
     id_trad INTEGER PRIMARY KEY,
@@ -196,11 +183,8 @@ def look_for_trad(languages,word):
     return t,pos1,pos11,pos2,test,len(test),test2,len(test2)
 
 def add_word(w,L):
-    conn = sql.connect(current_dir + '/training.db')
+    conn = sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
-    # print("""
-    #     Insert Into {}  (word) Values ('{}')
-    #                """.format(L,w))
     cursor.execute("""
         Insert Into {}  (word) Values ('{}')
                    """.format(L,w))
@@ -209,7 +193,7 @@ def add_word(w,L):
     conn.close()
     pass
 
-def add_trad(ida,idb,La,Lb):
+def add_trad(ida,idb,La,Lb): #deprecated use
     """
 
     Parameters
@@ -229,13 +213,9 @@ def add_trad(ida,idb,La,Lb):
     None.
 
     """
-    conn=sql.connect(current_dir + '/training.db')
-    cursor = conn.cursor()
-    # print(f"""
-    #     Insert Into {La}_{Lb}  (id_{La},id_{Lb}) Values ({ida},'{idb}')
-    #                """)
+    conn=sql.connect(current_dir + '/training2.db')
     cursor.execute(f"""
-        Insert Into {La}_{Lb}  (id_{La},id_{Lb}) Values ({ida},'{idb}')
+        Insert Into trad  (la,lb,ida,idb,groups) Values ('{La}','{Lb}',{ida},'{idb}','')
                    """)
     
     conn.commit()
@@ -269,11 +249,11 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
     """
     
     print(original_word,""" is already translated to :""")
-    conn=sql.connect(current_dir + '/training.db')
+    conn=sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     old_id_str = cursor.execute(f"""
-                    Select id_{Lb} from {La}_{Lb}
-                    Where id_{La} = {ida}
+                    Select idb from trad
+                    Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                     """).fetchone()[0]
     conn.commit()
     conn.close()
@@ -282,7 +262,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
     # we keep the original string for + section
     
     for i in range (0,len(old_id)) :
-        conn=sql.connect(current_dir + '/training.db')
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         word_id = cursor.execute(f"""
                         Select word from {Lb}
@@ -305,22 +285,22 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
         
     if answer2 == 'r':
         
-        conn=sql.connect(current_dir + '/training.db')
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
-                        Update {La}_{Lb} Set id_{Lb} = '{idb}'
-                        Where id_{La} = {ida}
+                        Update trad Set idb = '{idb}'
+                        Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                         """)
         conn.commit()
         conn.close()
-        new_trad=idb
+        new_trad = idb
         # we just replace the past idb by the new one
         
     elif answer2 == '+':
 
         new_id = idb.split(',')
         
-        print("by default we take new main trad as main trad",
+        print("by default we take new main tranlation as the main one",
               "if you want to keep old main translation write 1"
               ,sep = '\n')
         try :
@@ -350,11 +330,11 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
             else:
                 new_trad = idb
                 
-        conn=sql.connect(current_dir + '/training.db')
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
-                        Update {La}_{Lb} Set id_{Lb} = '{new_trad}'
-                        Where id_{La} = {ida}
+                        Update trad Set idb = '{new_trad}'
+                        Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                         """)
         #update of the values in the db
         conn.commit()
@@ -363,6 +343,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
 
 test_csv = current_dir + '/list_of_words.txt'
 verif_csv = current_dir + '/test_words.txt'
+verif_csv_kr = current_dir + '/test_words_korean.txt'
 
 def stat_maindecomp(C_main):
     trads = C_main.split(',')
@@ -380,35 +361,52 @@ def stat_maindecomp(C_main):
     return trad_stat
 
 def stat_train_updater(original_word,La,Lb,ida,trad):
-    try:
-        conn=sql.connect(current_dir + '/training.db')
+    conn=sql.connect(current_dir + '/training2.db')
+    cursor = conn.cursor()
+    groups = cursor.execute(f"""
+                    Select groups From trad 
+                    Where ida = {ida} and la = '{La}' and lb = '{Lb}'
+                    """).fetchone()[0]
+    conn.commit()
+    conn.close()
+    if 'train' not in groups.split(','):
+        # if the word was not part of training set we add it to it 
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
-            Insert Into train  (l_a,l_b,id_a,id_b) Values ('{La}','{Lb}',{ida},'{trad}')
+                    Update trad  set groups = 'train,{groups}'
+                    Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                        """)
-        conn.commit()
-        conn.close()
-    except sql.IntegrityError:
-        conn.commit()
-        conn.close()
-        print(f'{original_word} is already in the training set.',
-        'his translations and stats will be updated',sep='\n')
-        conn=sql.connect(current_dir + '/training.db')
-        cursor = conn.cursor()
         id_trad = cursor.execute(f"""
-                        Select id_trad From train
-                        Where id_a = {ida} and l_a = '{La}'
+                    Select id_trad From trad
+                    Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                        """).fetchone()[0]
-        cursor.execute(f"""
-                        Update train Set id_b = '{trad}'
-                        Where id_trad = {id_trad} 
-                       """)
+                       
         C_main = cursor.execute(f"""
                         Select C_main From stats 
                         Where id_trad = {id_trad}
-                       """).fetchone()[0]
+                       """).fetchone()
+        conn.commit()
+        conn.close()
+        
+    main_trad = int(trad.split(',')[0])
+    if C_main == None:
+        # id the translation don't have stats associated to his id we
+        # initialize them
+        conn=sql.connect(current_dir + '/training2.db')
+        cursor = conn.cursor()
+        cursor.execute(f"""
+                    Insert Into stats (id_trad,C_main,C_other,Total,Lastones,next_revision,status)
+                    Values ({id_trad},'{main_trad},0',0,0,'',{int(time.time())},'to_learn')
+                       """)
+        conn.commit()
+        conn.close()
+
+    else:
+        print(f'{original_word} from {La} to {Lb} is already in the training set.',
+        'his stats will be updated',sep='\n')
+
         current_stats = stat_maindecomp(C_main)
-        main_trad = int(trad.split(',')[0])
         is_in = False
         new_stats = ''
         for x in current_stats:
@@ -426,20 +424,6 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
                         Set C_main = '{new_stats}', next_revision = {int(time.time())}
                         Where id_trad = {id_trad}
                         """)
-        conn.commit()
-        conn.close()
-    else:
-        conn=sql.connect(current_dir + '/training.db')
-        cursor = conn.cursor()
-        id_trad = cursor.execute(f"""
-            Select id_trad From train
-            Where id_a = {ida} and l_a = '{La}'
-                       """).fetchone()[0]
-        main_trad = int(trad.split(',')[0])
-        cursor.execute(f"""
-            Insert Into stats (id_trad,C_main,C_other,Total,Lastones,next_revision,status)
-            Values ({id_trad},'{main_trad},0',0,0,'',{int(time.time())},'to_learn')
-                       """)
         conn.commit()
         conn.close()
 
@@ -462,7 +446,7 @@ def post(source):
         pass # wordreference lock acces from bots
         # true if we want to add search for translation on Wordreference
         
-        print("do you want to add a main translation ?")
+        print("do you want to select a main translation ?")
         print("(answer either y or anything else for no)")
         answer = str(input())
         
@@ -477,7 +461,6 @@ def post(source):
     #the goal there is to look for translation of a word on wordreference
                 
     else:# we don't want trad or there are already in the file 
-        ask_for_all = True
         print(words)
         for w in words:
             
@@ -492,10 +475,10 @@ def post(source):
             
             #we add words in the database
             
-            if len(l_word) > 2:# if there is 2 trad or more
+            if len(l_word) >= 2:# if there is 2 trad or more
             
                 print(f'are you sure of main translation for {l_word[0]}\n(chose a number)')
-                print(f'current translation is {l_word[1]}')
+                print(f'current main translation is {l_word[1]}')
                 print('other translation are :')
                 for i in range (2,len(l_word)) :
                     print(f'{i}) {l_word[i]}') 
@@ -509,7 +492,7 @@ def post(source):
                     # if we change main translation
                     l_word[1],l_word[answer1]=l_word[answer1],l_word[1]
                 
-                conn=sql.connect(current_dir + '/training.db')
+                conn=sql.connect(current_dir + '/training2.db')
                 cursor = conn.cursor()
                 ida = cursor.execute(f"""
                                      Select id from {La} 
@@ -525,7 +508,7 @@ def post(source):
                                      Select id from {Lb} 
                                      Where word = '{l_word[i]}'
                                          """)
-                    conn=sql.connect(current_dir + '/training.db')
+                    conn=sql.connect(current_dir + '/training2.db')
                     cursor = conn.cursor()
                     idb = idb + str(cursor.execute(f"""
                                      Select id from {Lb} 
@@ -542,10 +525,10 @@ def post(source):
                 try:
                     # we do not use add_trad because there was issues
                     # with the closing of the db due to the error handling
-                    conn=sql.connect(current_dir + '/training.db')
+                    conn=sql.connect(current_dir + '/training2.db')
                     cursor = conn.cursor()
                     cursor.execute(f"""
-                        Insert Into {La}_{Lb}  (id_{La},id_{Lb}) Values ({ida},'{idb}')
+                        Insert Into trad  (la,lb,ida,idb,groups) Values ('{La}','{Lb}',{ida},'{idb}','')
                                    """)
                     conn.commit()
                     conn.close()
@@ -562,7 +545,7 @@ def post(source):
                     # wasn't necessary but i don't know why)
                     
                     trad,old_trad = Unique_error_handler(l_word[0], La, Lb, ida, idb)
-            
+                
             print(trad)
             print(f'do you to add the translation for {l_word[0]} to training ?','(yes or anything else)',sep='\n')
             answer4 = str(input())
@@ -682,17 +665,17 @@ def false_update(current):
     return current
 
 def train(n):
-    conn=sql.connect(current_dir + '/training.db')
+    conn=sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     rows1 = cursor.execute(f"""
-        Select l_a,l_b,id_a,id_b,C_main,C_other,Total,Lastones,status,t.id_trad
-        from train As t Join stats As s 
+        Select la,lb,ida,idb,C_main,C_other,Total,Lastones,status,t.id_trad
+        from trad As t Join stats As s 
         On t.id_trad = s.id_trad
         Where next_revision < {time.time()}
                    """).fetchall()
     rows2 = cursor.execute(f"""
-        Select l_a,l_b,id_a,id_b,C_main,C_other,Total,Lastones,status,t.id_trad
-        from train As t Join stats As s 
+        Select la,lb,ida,idb,C_main,C_other,Total,Lastones,status,t.id_trad
+        from trad As t Join stats As s 
         On t.id_trad = s.id_trad
         Where next_revision > {time.time()}
         Order By next_revision 
@@ -705,24 +688,25 @@ def train(n):
     i=0
     while i < n:
         if i == len(rows1):
-            conn=sql.connect(current_dir + '/training.db')
+            conn=sql.connect(current_dir + '/training2.db')
             cursor = conn.cursor()
             still_pasttime = cursor.execute(f"""
-                Select l_a,l_b,id_a,id_b,C_main,C_other,Total,Lastones,status,t.id_trad
-                from train As t Join stats As s 
+                Select la,lb,ida,idb,C_main,C_other,Total,Lastones,status,t.id_trad
+                from trad As t Join stats As s 
                 On t.id_trad = s.id_trad
                 Where next_revision < {time.time()}
                            """).fetchall()
             if still_pasttime != []:
-                train(n-i)
+                print("there is more urgent one")
+                return train(n-i)
             conn.commit()
             conn.close()
-            print("")
         if i >= len(rows):
+            print("not enough word in the db")
             return train (n-i) 
         #this allow 
         current = list(rows[i])
-        conn=sql.connect(current_dir + '/training.db')
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         original_word = cursor.execute(f"""
                 Select word From {current[0]}
@@ -766,8 +750,7 @@ def train(n):
         else:
             current = right_update(current, ind_trad)
             print(current)
-        #@todo current is now well updated, need to update rows in stats
-        conn=sql.connect(current_dir + '/training.db')
+        conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
                 Update stats 
@@ -780,19 +763,16 @@ def train(n):
         print('\n')
         i+=1
     print('training ended')
-
-def QCM_train(n, x=4):
-    
-    pass
+    return None
 
 #%%
 # this cell show current state of the db (the 5 first row of each table)
-conn=sql.connect(current_dir + '/training.db')
+conn=sql.connect(current_dir + '/training2.db')
 cursor = conn.cursor()
 
 table = {}
 
-for x in ['eng','fr','eng_fr','fr_eng','train','stats']:
+for x in ['eng','fr','trad','stats']:
     table[x] = cursor.execute("""
                               Select * from {}
                               """.format(x)).fetchmany(5)
