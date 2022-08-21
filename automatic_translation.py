@@ -166,11 +166,15 @@ def all_details(La,Lb,word):
     # wordreference got many translation we limit ourself to main one only
     temp_main = driver.find_elements(by="xpath",value = principal_trads)
     good_main = []
-    good_lg = temp_main[0].text
+    
+    try:
+        good_lg = temp_main[0].text
+    except:
+        print(f"Wordreference doesn't have any data concerning {word} from {La} to {Lb}")
     
     for i in range (len(temp_main)):
         if temp_main[i].text == good_lg:
-            good_main.append(temp_main[i])
+            good_main.append(temp_main[i]) 
 
     containers = []
     for x in good_main:
