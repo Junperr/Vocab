@@ -19,43 +19,49 @@ driver = webdriver.Chrome(service=service, options=option_driver)
 
 #%%
 ['eng','fr','spn','jp','kr','chn','gr','dth','sw','ru','prt','pl',\
-          'rn','cz','grk','trk','ice','ar','na']
-part_url = {
-    "freng":'/enfr/',
-    "engfr":'/enfr/',
-    "spneng":'/es/en/translation.asp?spen=',
-    "engspn":'/es/translation.asp?tranword=',
-    "jpeng":'/jaen/',
-    "engjp":'/enja/',
-    "kreng":'/koen/',
-    "engkr":'/enko/',
-    "chneng":'/zhen/',
-    "engchn":'/enzh/',
-    "greng":'/deen/',
-    "enggr":'/ende/',
-    "dtheng":'/nlen/',
-    "engdth":'/ennl/',
-    "sweng":'/sven/',
-    "engsw":'/ensv/',
-    "rueng":'/ruen/',
-    "engru":'/enru/',
-    "prteng":'/pten/',
-    "engprt":'/enpt/',
-    "pleng":'/plen/',
-    "engpl":'/enpl/',
-    "rneng":'/roen/',
-    "engrn":'/enro/',
-    "czeng":'/czen/',
-    "engcz":'/encz/',
-    "grkeng":'/gren/',
-    "enggrk":'/engr/',
-    "trkeng":'/tren/',
-    "engtrk":'/entr/',
-    "iceeng":'/isen/',
-    "engice":'/enis/',
-    "areng":'/aren/',
-    "engar":'/enar/'
-}
+          'rn','cz','grk','trk','ice','ar','it','na']
+['en','fr','es','jp','ko','zh','de','nl','sv','ru','pt','pl',\
+          'ro','cz','gr','tr','is','ar','it','na']
+# part_url = {
+#     "freng":'/enfr/',"engfr":'/enfr/',
+#     "spneng":'/es/en/translation.asp?spen=',"engspn":'/es/translation.asp?tranword=',
+#     "jpeng":'/jaen/',"engjp":'/enja/',
+#     "kreng":'/koen/',"engkr":'/enko/',
+#     "chneng":'/zhen/',"engchn":'/enzh/',
+#     "greng":'/deen/',"enggr":'/ende/',
+#     "dtheng":'/nlen/',"engdth":'/ennl/',
+#     "sweng":'/sven/',"engsw":'/ensv/',
+#     "rueng":'/ruen/',"engru":'/enru/',
+#     "prteng":'/pten/',"engprt":'/enpt/',
+#     "pleng":'/plen/',"engpl":'/enpl/',
+#     "rneng":'/roen/',"engrn":'/enro/',
+#     "czeng":'/czen/',"engcz":'/encz/',
+#     "grkeng":'/gren/',"enggrk":'/engr/',
+#     "trkeng":'/tren/',"engtrk":'/entr/',
+#     "iceeng":'/isen/',"engice":'/enis/',
+#     "areng":'/aren/',"engar":'/enar/'
+# }
+  
+test_wrd = {'en': 'bord',
+ 'fr': 'table',
+ 'es': 'mesa',
+ 'jp': 'テーブル',
+ 'ko': '테이블',
+ 'chn': '桌子',
+ 'de': 'Tisch',
+ 'nl': 'tafel',
+ 'sv': 'bord',
+ 'ru': 'стол',
+ 'pt': 'mesa',
+ 'pl': 'stół',
+ 'ro': 'masă',
+ 'cz': 'stůl',
+ 'gr': 'τραπέζι',
+ 'tr': 'masa',
+ 'ice': 'borð',
+ 'ar': 'طاولة',
+ 'it': 'tavolo'}
+
 
 def cut_first_charx(text, x = '\n', avoid = '\r'):
     t = ['','']
@@ -147,19 +153,31 @@ def cut_multi_trad(txt,sep=','):
         stock[i] = cut_spaces(stock[i])
     return stock
 
-def all_details(La,Lb,word):
+def all_details(La,Lb,word): 
     
-    t = part_url[La+Lb]
+    t = '/'+La+Lb+'/'
     website = f'https://www.wordreference.com{t}{word}'
-    
     driver.get(website)
     if La == 'ice' or Lb == 'ice':
         principal_trads = "//table[@class='WRD']/*/tr[@class='wrtopsection']/td[@title='Aðalþýðingar']/../../../*"
-    else:
-        principal_trads = "//table[@class='WRD']/*/tr[@class='wrtopsection']/td[@title='Principal Translations']/../../../*"
+    else:#//span[@data-ph = "sFromOtherSide"]/../../
+    #(//table[@class='WRD']/*/tr[@class='wrtopsection']/td[@title='Principal Translations']/../../tr[@class='langHeader'])[1]
+        principal_trads = "//table[@class='WRD']/*/tr[@class='wrtopsection']/td[@title='Principal Translations']/../../tr[@class='langHeader']/td[@class='ToWrd']/span"
     # wordreference got many translation we limit ourself to main one only
-    containers = driver.find_elements(by="xpath",\
-                    value = principal_trads + "/tr[(@class='even' or @class='odd')]" )
+    temp_main = driver.find_elements(by="xpath",value = principal_trads)
+    good_main = []
+    good_lg = temp_main[0].text
+    
+    for i in range (len(temp_main)):
+        if temp_main[i].text == good_lg:
+            good_main.append(temp_main[i])
+
+    containers = []
+    for x in good_main:
+        for elem in x.find_elements(by="xpath",\
+                            value = "./../../../tr[(@class='even' or @class='odd')]"):
+            containers.append(elem)
+    # print(containers)
     # we get every line in main translation section
     sep_trad = []
     # return containers
@@ -252,11 +270,13 @@ def all_details(La,Lb,word):
                 except: pass
                 else: current_trad['toex'] = Toex
                 
-            # print(current_trad)
+
     if current_trad != default_dic:
         sep_trad.append(current_trad)  
     
     for x in sep_trad:
+        if x['meaning'] == '':
+            x['meaning'] = 'not specified by wordreference'
         if len(x["toword"]) == 1:
             print(f'{x["frword"]} \nwith the meaning of {suppr_parenthesis(x["meaning"])}',
               f'is translated to {x["toword"][0]}',sep='\n')
@@ -276,7 +296,5 @@ def all_details(La,Lb,word):
                 print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}\n')
             else:
                 print("Wordreference do not provide example for this translation\n")
-    # print(default_dic)
 
-# all_details(website)
     
