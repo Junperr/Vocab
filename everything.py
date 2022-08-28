@@ -16,8 +16,8 @@ current_dir = os.getcwd()
 conn=sql.connect(current_dir + '/training2.db')
 cursor = conn.cursor()
 
-lg_code = ['eng','fr','spn','jp','kr','chn','gr','dth','sw','ru','prt','pl',\
-          'rn','cz','grk','trk','ice','ar','na']
+lg_code = ['en','fr','es','jp','ko','zh','de','nl','sv','ru','pt','pl',\
+          'ro','cz','gr','tr','is','ar','it','na']
 
 for x in lg_code:
     
@@ -171,8 +171,6 @@ def look_for_trad(languages,word):
         t=''
         for x in text :
             t = t + chr(x)
-        # TODO collect interval where a translation is available 
-        # current idea : use mechanize to execute javascript and css
         print(t[:100000],len(t))
         pos1 = search_trads('FrWrd',t)
         pos11= t.index('FrWrd')

@@ -1,21 +1,22 @@
 Languages abbreviation
 
-English : eng
+English : en
 French : fr
-Spanish : spn
+Spanish : es
 Japanese : jp
-Korean : kr
-Chinese : chn
-German : gr
-Dutch : dth
-Swedish : sw
+Korean : ko
+Chinese : zh
+German : de
+Dutch : nl
+Swedish : sv
 Russian : ru
-Portuguese : prt
+Portuguese : pt
 Polis : pl
-Romanian : rn
+Romanian : ro
 Czech : cz
-Greek : grk
-Turkish : trk
-Icelendic : ice
+Greek : gr
+Turkish : tr
+Icelandic : is
 Arabic : ar
+Italian : it
 Other : na
