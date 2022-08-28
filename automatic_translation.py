@@ -114,16 +114,16 @@ def eng_toword_chn(containers):
     
     for x in Toword:
         chn_trad = cut_multi_trad(driver.execute_script("""
-var parent = arguments[0];
-var child = parent.firstChild;
-var ret = "";
-while(child) {
-    if (child.nodeType === Node.TEXT_NODE)
-        ret += child.textContent;
-    child = child.nextSibling;
-}
-return ret;
-""", x),sep='，')
+            var parent = arguments[0];
+            var child = parent.firstChild;
+            var ret = "";
+            while(child) {
+                if (child.nodeType === Node.TEXT_NODE)
+                    ret += child.textContent;
+                child = child.nextSibling;
+            }
+            return ret;
+            """, x),sep='，')
     # that's a script found on stackoverflow at 
     # https://stackoverflow.com/questions/12325454/how-to-get-text-of-an-element-in-selenium-webdriver-without-including-child-ele
     # it allow me to get the text on the node and not his child 
@@ -138,12 +138,14 @@ return ret;
                 trads.append(f"TC: {chn_trad[ind]}")
         else:
             if len(chn_trad) == len(pinyin):
-                # if each SC is "linked" to a pinyin word it's almost always the case
+                # if each SC is "linked" to a pinyin word it's always the case
                 for ind in range (len(chn_trad)):
                     trads.append(f"SC: {chn_trad[ind]}")
                     if pinyin[ind] != '': 
                         trads.append(f"Pinyin: {pinyin[ind]}")
-            else:# there not linked
+            else:# there not linked 
+                # in fact it's useful while chinese is the La language
+                # because the translation are still in a zhgroup with it's not chinese
                 for ind in range (len(chn_trad)):
                     trads.append(f"SC: {chn_trad[ind]}")
                 for ind in range (len(pinyin)):
@@ -200,8 +202,13 @@ def recup_elem(La,Lb,containers):
     current_trad["toword"] = []
     current_trad["charac"] = {}
     # initialisation of current_trad
-    Frword = containers.find_element(by="xpath",\
+    try:# wordreference is not structured the exact same ways,
+        # with some languages
+        Frword = containers.find_element(by="xpath",\
                                     value="./td[@class='FrWrd']/strong" ).text
+    except:
+        Frword = containers.find_element(by="xpath",\
+                                    value="./td[@class='FrWrd']/span/strong" ).text
     # Frword contain the word we translate
     try:# wordreference is not structured the exact same ways,
         # with some languages
@@ -227,6 +234,78 @@ def recup_elem(La,Lb,containers):
         
     return current_trad
 
+def other_lines(La,Lb,containers,current_trad):
+    """
+    Is called while a line is not the first one of the case,
+    It handle example sentence and other translation often with other meaning
+    which appear on other lines
+    """
+    try:# no error if it is other translation with the same meaning
+        if La == 'zh' or Lb == 'zh':
+            add_toword = cut_multi_trad(eng_toword_chn(containers))
+            
+        else:
+            add_toword = cut_multi_trad(cut_first_charx(containers.find_element(by="xpath",\
+                                value="./td[@class='ToWrd']" ).get_attribute("innerHTML"), x='<', avoid = '\r')[0])
+        # get the differents translation on this line 
+        # (therefore with the same nuance)
+    except:
+        try:# no error if it is an example in La
+            Frex = cut_spaces(containers.find_element(by="xpath",\
+                                  value="./td[@class='FrEx']").text)
+        except:
+            try:# no error if it is an example in Lb
+                Toex = cut_spaces(containers.find_element(by="xpath",\
+                                      value="./td[@class='ToEx']").text)
+            except: pass
+            else:# if it is an example in Lb
+                current_trad['toex'] = Toex
+        else:# if it is an example in La
+            current_trad['frex'] = Frex
+        
+    else:# if there is other translation with the same meaning
+        
+        try:
+            characs = containers.find_element(by="xpath",\
+                                        value="./td[@class='To2']/span" ).text
+            # we get the nuance of the translation
+        except:pass
+        else:
+            for x in add_toword:
+                current_trad['charac'][len(current_trad["toword"])] = characs
+                current_trad["toword"].append(x)
+                # x is added to the translation and it nuance
+                # is stored in current_trad['charac'] at the ind
+                # of x in current_trad['toword]
+    return current_trad
+
+def inv_swap(La,Lb,current_trad,word):
+    """
+    It swap the word and his translation as well as the example
+    """
+    if La == 'zh' or Lb == 'zh':
+        # chinese is taken as an exeption because i add SC: before the word
+        for x in current_trad['toword']:
+            if word == cut_first_charx(x,' '):
+                stock = current_trad['toex']
+                current_trad['toword'] = [current_trad['frword']]
+                current_trad['frword'] = word
+                current_trad['toex'] = current_trad['frex']
+                current_trad['frex'] = stock
+                return current_trad,True
+        return current_trad,False
+    else:
+        if word in current_trad['toword']:
+            stock = current_trad['toex']
+            current_trad['toword'] = [current_trad['frword']]
+            current_trad['frword'] = word
+            current_trad['toex'] = current_trad['frex']
+            current_trad['frex'] = stock
+            return current_trad,True
+        else:
+            return current_trad,False
+        # we also return a boelean to tell is it was inversed or not
+    
 
 def all_details(La,Lb,word): 
     """
@@ -265,6 +344,8 @@ def all_details(La,Lb,word):
         principal_trads = "//table[@class='WRD']/*/tr[@class='wrtopsection']/td[@title='Principal Translations']/../../tr[@class='langHeader']/td[@class='ToWrd']/span"
     # wordreference got many translation we limit ourself to the main ones
     
+    inv_dic = driver.find_elements(by="xpath",value = """//td[@id='centercolumn']/div[@id='articleWRD']/div[@style='text-align:center;font-size:13px;margin-bottom:15px;']/b/span[@data-ph='sFromOtherSide']""") != []
+    # we check is there show result in reversed dictionnary
     temp_main = driver.find_elements(by="xpath",value = principal_trads)
     # we retreive all elements for main translations
     good_main = []
@@ -279,20 +360,19 @@ def all_details(La,Lb,word):
             good_main.append(temp_main[i]) 
         else:
             inv_main.append(temp_main[i])
-    ind_switch = len(good_main)
     # good_main and inv_main contain node for principal translation sections
-    
+
     containers = []
     for x in good_main:
         for elem in x.find_elements(by="xpath",\
                             value = "./../../../tr[(@class='even' or @class='odd')]"):
             containers.append(elem)
     ind_switch = len(containers)
+
     for x in inv_main:
         for elem in x.find_elements(by="xpath",\
                             value = "./../../../tr[(@class='even' or @class='odd')]"):
             containers.append(elem)
-    
 
     # we get every line in main translation section
     sep_trad = []
@@ -302,7 +382,10 @@ def all_details(La,Lb,word):
     current_trad["charac"] = {}
         
     for i in range (len(containers)):
-        if i < ind_switch:
+        if i < ind_switch and not(len(inv_main) == 0 and inv_dic):
+            # the second condition is to prevent case when there is no result
+            # in the way asked but only in the reverse dictionnary like 'is','en','drasl'
+            
             is_new_trad = containers[i].get_attribute('id') != ''
             # to know when when we change from a translation to another we check
             # if it contain an id attribute if it got one is_new_trad is True
@@ -312,52 +395,42 @@ def all_details(La,Lb,word):
                     current_trad = recup_elem(La, Lb, containers[i])
                 else:
                     current_trad = recup_elem(La, Lb, containers[i])
+                    
             else:# if it's complement on the trad 
             # (examples of sentences using the words or other translation with
             # the same meaning but with nuances)
 
-                try:# no error if it is other translation with the same meaning
-                    if La == 'zh' or Lb == 'zh':
-                        add_toword = cut_multi_trad(eng_toword_chn(containers[i]))
-                        
-                    else:
-                        add_toword = cut_multi_trad(cut_first_charx(containers[i].find_element(by="xpath",\
-                                            value="./td[@class='ToWrd']" ).get_attribute("innerHTML"), x='<', avoid = '\r')[0])
-                    # get the differents translation on this line 
-                    # (therefore with the same nuance)
-                except:
-                    try:# no error if it is an example in La
-                        Frex = cut_spaces(containers[i].find_element(by="xpath",\
-                                              value="./td[@class='FrEx']").text)
-                    except:
-                        try:# no error if it is an example in Lb
-                            Toex = cut_spaces(containers[i].find_element(by="xpath",\
-                                                  value="./td[@class='ToEx']").text)
-                        except: pass
-                        else:# if it is an example in Lb
-                            current_trad['toex'] = Toex
-                    else:# if it is an example in La
-                        current_trad['frex'] = Frex
-                    
-                else:# if there is other translation with the same meaning
-                    
-                    try:
-                        characs = containers[i].find_element(by="xpath",\
-                                                    value="./td[@class='To2']/span" ).text
-                        # we get the nuance of the translation
-                    except:pass
-                    else:
-                        for x in add_toword:
-                            current_trad['charac'][len(current_trad["toword"])] = characs
-                            current_trad["toword"].append(x)
-                            # x is added to the translation and it nuance
-                            # is stored in current_trad['charac'] at the ind
-                            # of x in current_trad['toword]
-                
+                current_trad = other_lines(La, Lb, containers[i], current_trad)        
+       
+        else:# we reach inversed translation
             
+            is_new_trad = containers[i].get_attribute('id') != ''
+            # to know when when we change from a translation to another we check
+            # if it contain an id attribute if it got one is_new_trad is True
+            if is_new_trad: # if not the first trad
+                if current_trad != default_dic:
+                    current_trad,to_add = inv_swap(La, Lb, current_trad, word)
+                    if to_add or i == ind_switch:
+                        # if it was inversed of if it's the last of normal dic
+                        sep_trad.append(current_trad)
+                    current_trad = recup_elem(La, Lb, containers[i])
+                else:
+                    current_trad = recup_elem(La, Lb, containers[i])
+                    
+            else:# if it's complement on the trad 
+            # (examples of sentences using the words or other translation with
+            # the same meaning but with nuances)
+
+                current_trad = other_lines(La, Lb, containers[i], current_trad)
+                
 
     if current_trad != default_dic:
-        sep_trad.append(current_trad)
+        if i < ind_switch and not(len(inv_main) == 0 and inv_dic):
+            sep_trad.append(current_trad)
+        else:
+            current_trad,to_add = inv_swap(La, Lb, current_trad, word)
+            if to_add:
+                sep_trad.append(current_trad)
     # we need to add the last translation
     
     for x in sep_trad:
