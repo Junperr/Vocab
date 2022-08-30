@@ -432,6 +432,8 @@ def all_details(La,Lb,word):
             if to_add:
                 sep_trad.append(current_trad)
     # we need to add the last translation
+
+    trads = []
     
     for x in sep_trad:
         # this part is just the "front part" which consist of print in a console
@@ -447,6 +449,9 @@ def all_details(La,Lb,word):
                 print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}\n')
             else:
                 print("Word reference do not provide example for this translation\n")
+            if x["toword"][0] not in trads:
+                trads.append(x["toword"][0])
+            # we don't use set to keep an order in the translation
         
         else:# if there is many translation
         
@@ -458,11 +463,13 @@ def all_details(La,Lb,word):
                     print(f"{t+1}) {x['toword'][t]} with the nuance of {x['charac'].get(t)}")
                 else:
                     print(f"{t+1}) {x['toword'][t]}")
+                if x["toword"][t] not in trads:
+                    trads.append(x["toword"][t])
             # we show all the translations
             
             if x["frex"] != '' or x["toex"] != '':
                 print(f'For example \n{x["frex"]}\nwould be translated to \n{x["toex"]}\n')
             else:
                 print("Wordreference do not provide example for this translation\n")
-
-    
+            
+    return trads

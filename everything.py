@@ -8,7 +8,7 @@ Created on Tue Jun 14 10:05:28 2022
 import sqlite3  as sql
 import urllib.request
 import os
-import sys
+from automatic_translation import all_details
 import time
 
 current_dir = os.getcwd()
@@ -22,7 +22,7 @@ lg_code = ['en','fr','es','jp','ko','zh','de','nl','sv','ru','pt','pl',\
 for x in lg_code:
     
     cursor.execute(f"""
-    CREATE TABLE IF NOT EXISTS {x}(
+    CREATE TABLE IF NOT EXISTS '{x}'(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         word TEXT NOT NULL,
         UNIQUE (word)) 
@@ -440,116 +440,101 @@ def post(source):
     
     # we split our entry between the format we want and the words
         
-    if not bool(languages[2]): 
-        pass # wordreference lock acces from bots
-        # true if we want to add search for translation on Wordreference
+    print(words)
+    for w in words:
         
-        print("do you want to select a main translation ?")
-        print("(answer either y or anything else for no)")
-        answer = str(input())
-        
-        if answer == 'y':
-            for w in words:
-                trad = []
-                #@todo need to find translation on wordreference
-                print(f'select main trad for {w}\n(chose a number)')
-                for i in range (len(trad)) :
-                    print(f'{i}) {trad[i]}')
-                answer1 = int(input())
-    #the goal there is to look for translation of a word on wordreference
-                
-    else:# we don't want trad or there are already in the file 
-        print(words)
-        for w in words:
-            
-            l_word = w.split('/')
-            try: 
-                add_word(l_word[0],La)
+        l_word = w.split('/')
+        if len(l_word) == 1:
+            trads = all_details(La,Lb,l_word[0])
+            for trad in trads:
+                l_word.append(trad)
+        try: 
+            add_word(l_word[0],La)
+        except:pass
+        for i in range (1,len(l_word)):
+            try:
+                add_word(l_word[i],Lb)
             except:pass
+        print(l_word)
+        #we add words in the database
+        
+        if len(l_word) >= 2:# if there is 1 trad or more
+        
+            print(f'are you sure of main translation for {l_word[0]}\n(chose a number)')
+            print(f'current main translation is {l_word[1]}')
+            print('other translation are :')
+            for i in range (2,len(l_word)) :
+                print(f'{i}) {l_word[i]}') 
+            
+            try:
+                answer1 = int(input())
+            except ValueError:
+                answer1 = None
+                
+            if answer1 in [x for x in range (2,len(l_word))]:
+                # if we change main translation
+                l_word[1],l_word[answer1]=l_word[answer1],l_word[1]
+            
+            conn=sql.connect(current_dir + '/training2.db')
+            cursor = conn.cursor()
+            ida = cursor.execute(f"""
+                                 Select id from {La} 
+                                 Where word = '{l_word[0]}'
+                                 """).fetchone()[0]
+            conn.commit()
+            conn.close()
+            # we retreive in the db the id of the word we want to translate
+            
+            idb = ''
             for i in range (1,len(l_word)):
-                try:
-                    add_word(l_word[i],Lb)
-                except:pass
-            
-            #we add words in the database
-            
-            if len(l_word) >= 2:# if there is 2 trad or more
-            
-                print(f'are you sure of main translation for {l_word[0]}\n(chose a number)')
-                print(f'current main translation is {l_word[1]}')
-                print('other translation are :')
-                for i in range (2,len(l_word)) :
-                    print(f'{i}) {l_word[i]}') 
-                
-                try:
-                    answer1 = int(input())
-                except ValueError:
-                    answer1 = None
-                    
-                if answer1 in [x for x in range (2,len(l_word))]:
-                    # if we change main translation
-                    l_word[1],l_word[answer1]=l_word[answer1],l_word[1]
-                
+                print(f"""
+                                 Select id from {Lb} 
+                                 Where word = '{l_word[i]}'
+                                     """)
                 conn=sql.connect(current_dir + '/training2.db')
                 cursor = conn.cursor()
-                ida = cursor.execute(f"""
-                                     Select id from {La} 
-                                     Where word = '{l_word[0]}'
-                                     """).fetchone()[0]
+                idb = idb + str(cursor.execute(f"""
+                                 Select id from {Lb} 
+                                 Where word = '{l_word[i]}'
+                                     """).fetchone()[0])
                 conn.commit()
                 conn.close()
-                # we retreive in the db the id of the word we want to translate
+                if i != len(l_word)-1:
+                    idb = idb + ','
+            
+            # we create a string containing the id for all the translation
+            #we want to add
+                    
+            try:
+                # we do not use add_trad because there was issues
+                # with the closing of the db due to the error handling
+                conn=sql.connect(current_dir + '/training2.db')
+                cursor = conn.cursor()
+                cursor.execute(f"""
+                    Insert Into trad  (la,lb,ida,idb,groups) Values ('{La}','{Lb}',{ida},'{idb}','')
+                               """)
+                conn.commit()
+                conn.close()
+                trad = idb
+                old_trad = idb
                 
-                idb = ''
-                for i in range (1,len(l_word)):
-                    print(f"""
-                                     Select id from {Lb} 
-                                     Where word = '{l_word[i]}'
-                                         """)
-                    conn=sql.connect(current_dir + '/training2.db')
-                    cursor = conn.cursor()
-                    idb = idb + str(cursor.execute(f"""
-                                     Select id from {Lb} 
-                                     Where word = '{l_word[i]}'
-                                         """).fetchone()[0])
-                    conn.commit()
-                    conn.close()
-                    if i != len(l_word)-1:
-                        idb = idb + ','
+                # if the word isn't already translated we add it to the db
                 
-                # we create a string containing the id for all the translation
-                #we want to add
-                        
-                try:
-                    # we do not use add_trad because there was issues
-                    # with the closing of the db due to the error handling
-                    conn=sql.connect(current_dir + '/training2.db')
-                    cursor = conn.cursor()
-                    cursor.execute(f"""
-                        Insert Into trad  (la,lb,ida,idb,groups) Values ('{La}','{Lb}',{ida},'{idb}','')
-                                   """)
-                    conn.commit()
-                    conn.close()
-                    trad = idb
-                    old_trad = idb
-                    
-                    # if the word isn't already translated we add it to the db
-                    
-                except sql.IntegrityError:# if already translated
-                    conn.commit()
-                    conn.close()# is previous cursor.execute raise an error
-                    # the previous commit and close are not reached so we
-                    # close it now (without using the next fuction it
-                    # wasn't necessary but i don't know why)
-                    
-                    trad,old_trad = Unique_error_handler(l_word[0], La, Lb, ida, idb)
+            except sql.IntegrityError:# if already translated
+                conn.commit()
+                conn.close()# is previous cursor.execute raise an error
+                # the previous commit and close are not reached so we
+                # close it now (without using the next fuction it
+                # wasn't necessary but i don't know why)
                 
-            print(trad)
-            print(f'do you to add the translation for {l_word[0]} to training ?','(yes or anything else)',sep='\n')
-            answer4 = str(input())
-            if answer4 == 'yes':
-                stat_train_updater(l_word[0], La, Lb, ida, idb)
-                    
+                trad,old_trad = Unique_error_handler(l_word[0], La, Lb, ida, idb)
+            
+        print(trad)
+        print(f'do you to add the translation for {l_word[0]} to training ?','(yes or anything else)',sep='\n')
+        answer4 = str(input())
+        if answer4 == 'yes':
+            stat_train_updater(l_word[0], La, Lb, ida, idb)
+                
 
     pass 
 
