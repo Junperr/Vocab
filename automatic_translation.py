@@ -325,7 +325,7 @@ def all_details(La,Lb,word):
     
     Explanation
     -----------
-    Print all the main translation recorded by wordreference 
+    Print all the mains translations recorded by wordreference 
     for word in La to Lb with the meaning possibe nuance and possible example.
     
     """

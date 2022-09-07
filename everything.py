@@ -55,166 +55,29 @@ conn.close()
 #%%
 
 def cut_first_charx(text, x = '\n', avoid = '\r'):
+    """
+    It cut in 2 a text at the first 'x' character while avoiding 
+    all 'avoid' character
+    """
     t = ['','']
     i = 0
     while text[i] != x:
         if text[i] != avoid:
             t[0] = t[0] + text[i]
         i += 1
-    t[1] = text[i+1:]
+    for j in range (i,len(text)):
+        t[1] = text[j]
     return t
 
-def est_present (m,t,s):
-    return t[s:s + len(m)] == m
-
-def calcule_dico(m):
-    
-    """ renvois un dictionnaire contenant les occurances 
-    des lettres presentes dans m"""
-    
-    d={}
-    for i in range (len(m)):
-        d[m[i]] = i
-    return d
-
-def search_trads(m,t,i=0,j=None):
-    
-    """
-    Parameters
-    ----------
-    m : str
-        the seeked word.
-    t : str
-        the text where you seek the word m.
-    i : int
-
-    j : int
-    
-    Returns
-    -------
-    l : set
-        une liste des position.
-    
-    This fonction get the positions of the fist later of m in t if the index
-    of each later of m in in [|i,j|]
-    
-    j'utilise un algorithme de fenetre  glissante qui permet de reduire
-    le temps de recherche par 3 (resultat expérimental), il fonctionne en
-    prenant en compte la derniere occurence de chaque lettre dans le mot cherche
-    
-    l'utilisation de set permet un gain de temps par rapport à la liste'
-    """
-    if j == None:
-        j = len(t)-1
-    elif j >= len(t):
-    
-            raise IndexError('j is superior to len(t)')
-            
-    d = calcule_dico(m)
-    pos = i
-    l = set()
-    # changer endurl_rapide pour rechercher plusieurs chose à la suite
-    while pos < j-len(m)+1:
-        if est_present(m, t, pos):
-            l.add(pos)
-        pos = pos + len(m) - d.get(t[pos+len(m)],-1)
-
-    if pos == j-len(m)+1 and est_present(m,t,pos):
-        l.add(pos)
-        return l
-    return l
-
-def url_reader(url):
-    '''
-    Arguments:
-        --url : url you want to read
-    return the source code of the url (it's not a string but bytes)
-    ''' 
-    try:
-        html_code = urllib.request.urlopen(url)
-        # open the url code source 
-    except:
-        print('Acces failed')
-        return None
-    else:
-        return html_code.read()
-        # return serie of byte to change byte to str chr(x) 
-    return None
-
-def look_for_trad(languages,word):
-    """
-    CURRECTLY ON STANDBY BECAUSE WORDREFERENCE LOCK ACCESS BY BOTS
-
-    Parameters
-    ----------
-    languages : TYPE
-        DESCRIPTION.
-    word : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
-    
-    """
-    try : 
-        ind1 = ['fr','eng'].index(languages[0])
-        ind2 = ['fr','eng'].index(languages[1])
-        t = ['fr','en' ][ind1] + ['fr','en' ][ind2] 
-    except :
-        print('debug your fucking code')
-        pass
-    else:
-        url = f'https://www.wordreference.com/{t}/{word}'
-        text = url_reader(url)
-        t=''
-        for x in text :
-            t = t + chr(x)
-        print(t[:100000],len(t))
-        pos1 = search_trads('FrWrd',t)
-        pos11= t.index('FrWrd')
-        pos2 = search_trads('ToWrd',t)
-        test = search_trads("centercolumn",t)
-        test2 = search_trads(word,t)
-        print(url)
-    return t,pos1,pos11,pos2,test,len(test),test2,len(test2)
-
 def add_word(w,L):
+    """
+    add the word w to the table for language L
+    """
     conn = sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     cursor.execute("""
         Insert Into {}  (word) Values ('{}')
                    """.format(L,w))
-    
-    conn.commit()
-    conn.close()
-    pass
-
-def add_trad(ida,idb,La,Lb): #deprecated use
-    """
-
-    Parameters
-    ----------
-    ida : INT
-        id of the word you want to translate in La language.
-    idb : STR
-        ids on csv string of the translated meaning in Lb language
-        main translation should be the first id of idb.
-    La : STR
-        Code for the language of word you want translated.
-    Lb : STR
-        Code for the language of translations.
-
-    Returns
-    -------
-    None.
-
-    """
-    conn=sql.connect(current_dir + '/training2.db')
-    cursor.execute(f"""
-        Insert Into trad  (la,lb,ida,idb,groups) Values ('{La}','{Lb}',{ida},'{idb}','')
-                   """)
     
     conn.commit()
     conn.close()
@@ -246,7 +109,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
 
     """
     
-    print(original_word,""" is already translated to :""")
+    print(original_word,"""is already translated to :""")
     conn=sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     old_id_str = cursor.execute(f"""
@@ -260,7 +123,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
     # we keep the original string for + section
     
     for i in range (0,len(old_id)) :
-        conn=sql.connect(current_dir + '/training2.db')
+        conn = sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         word_id = cursor.execute(f"""
                         Select word from {Lb}
@@ -275,14 +138,15 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
             print(f'{i}) {word_id}')
         else:
             print(f'{i}) {word_id}')
-        # and we print the words associated to those id
+        # and we print the words associated to those ids
     print("if you want to add more translation write +",
           "if you want to replace write r",
           "everything else won't change anything",sep='\n')
     answer2 = str(input())
+    # User make a choice
         
     if answer2 == 'r':
-        
+        # we want to replace old translation by the new ones
         conn=sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -295,7 +159,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
         # we just replace the past idb by the new one
         
     elif answer2 == '+':
-
+        # we keep old translation and add the new ones to them
         new_id = idb.split(',')
         
         print("by default we take new main tranlation as the main one",
@@ -305,6 +169,9 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
             answer3 = int(input())
         except ValueError:
             answer3 = None
+        # if user do not answer an integer it won't work and the
+        # only useful value is 1 we don't use answer3 == '1' if the user put
+        # a space it won't work
         
         print(old_id)
         new_trad_p2 = ''
@@ -313,16 +180,16 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
                 new_trad_p2 = new_trad_p2 + str(old_id[i])
                 if i != len(old_id)-1:
                     new_trad_p2 = new_trad_p2 + ','
-        #new_trad_p2 contain the id of new translation pour original_word
+        # new_trad_p2 contain the id of new translation for original_word
                 
         if answer3 == 1:
-            #here we keep past main translation
+            # here we keep past main translation
             if len(new_trad_p2)!=0:
                 new_trad = old_id_str + ',' + new_trad_p2
             else:
                 new_trad = old_id_str
         else :
-            #here we take the new main translation
+            # here we take the new main translation
             if len(new_trad_p2)!=0:
                 new_trad = idb + ',' + new_trad_p2
             else:
@@ -334,7 +201,7 @@ def Unique_error_handler(original_word,La,Lb,ida,idb):
                         Update trad Set idb = '{new_trad}'
                         Where ida = {ida} and la = '{La}' and lb = '{Lb}'
                         """)
-        #update of the values in the db
+        # update of the values in the db
         conn.commit()
         conn.close()
     return new_trad,old_id_str
@@ -344,14 +211,21 @@ verif_csv = current_dir + '/test_words.txt'
 verif_csv_kr = current_dir + '/test_words_korean.txt'
 
 def stat_maindecomp(C_main):
+    """
+    Take the string for C_main and return it in a list of list 
+    """
     trads = C_main.split(',')
     trad_stat = []
     if len(trads)%2 == 1:
         raise ValueError('C_main should have an even number of values')
     if len(trads) != 1:
+        # seem to always append since len(trads) is odd
         current = [0,0]
         for i in range (len(trads)):
-            current[i%2] = int(trads[i])
+            try: 
+                current[i%2] = int(trads[i])
+            except:
+                "C_main format isn't the good one (it was not an integer)"
             if i%2 == 1:
                 trad_stat.append(current.copy())
     else:
@@ -359,6 +233,9 @@ def stat_maindecomp(C_main):
     return trad_stat
 
 def stat_train_updater(original_word,La,Lb,ida,trad):
+    """
+    It update stats when a user want to add a trad to training
+    """
     conn=sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     groups = cursor.execute(f"""
@@ -367,9 +244,10 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
                     """).fetchone()[0]
     conn.commit()
     conn.close()
+    # we recup the groups (be aware that group isn't really working for the moment)
     if 'train' not in groups.split(','):
         # if the word was not part of training set we add it to it 
-        conn=sql.connect(current_dir + '/training2.db')
+        conn = sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         cursor.execute(f"""
                     Update trad  set groups = 'train,{groups}'
@@ -386,7 +264,7 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
                        """).fetchone()
         conn.commit()
         conn.close()
-        
+    # as long as update groups we get C_main and id_trad
     main_trad = int(trad.split(',')[0])
     if C_main == None:
         # id the translation don't have stats associated to his id we
@@ -401,6 +279,7 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
         conn.close()
 
     else:
+        # there was already stat for this id_trad
         print(f'{original_word} from {La} to {Lb} is already in the training set.',
         'his stats will be updated',sep='\n')
 
@@ -411,17 +290,22 @@ def stat_train_updater(original_word,La,Lb,ida,trad):
             new_stats = new_stats + str(x[0]) + ',' +str(x[1]) + ','
             if x[0] == main_trad:
                 is_in = True
-                
+        
         if is_in:
             new_stats = new_stats[:-1]
+            # it suppress the last coma
         else:
             new_stats = new_stats + str(main_trad) + ',' + '0'
+            # we add stat for current main_trad
             
         cursor.execute(f"""
                         Update stats 
                         Set C_main = '{new_stats}', next_revision = {int(time.time())}
                         Where id_trad = {id_trad}
                         """)
+        # and finally we update stats with new C_main
+        # there is an error there we always set_up the next_revision to now
+        # whilde it's already it already got stats so it may not be to_learn
         conn.commit()
         conn.close()
 
@@ -429,25 +313,29 @@ import codecs
 
 def post(source):
 
-    if type(source)==list:
+    if type(source)==list:#if we have manually given the data (useful for small test)
         languages = source[0].split(',')
         words = source[1].split(',')
-    else:
+    else:# if we use a file in our directory
         source = cut_first_charx(codecs.open(source,'r',encoding='utf-8').read())
         languages = source[0].split(',')[:-1]
         words = source[1].split(',')
     La,Lb = languages[0],languages[1]
     
-    # we split our entry between the format we want and the words
-        
+    # now we have the words we want to translate and the languages
+    # La is the languages of the word and Lb the language of the translations
+    
     print(words)
     for w in words:
         
         l_word = w.split('/')
         if len(l_word) == 1:
+            # if the word don't already have translation
             trads = all_details(La,Lb,l_word[0])
             for trad in trads:
                 l_word.append(trad)
+            # we add main trads for wordreference
+        # l_word[0] is the word in La and l_word[1:] is the translation we have in Lb
         try: 
             add_word(l_word[0],La)
         except:pass
@@ -455,8 +343,8 @@ def post(source):
             try:
                 add_word(l_word[i],Lb)
             except:pass
+        # we add each word in the the their language table
         print(l_word)
-        #we add words in the database
         
         if len(l_word) >= 2:# if there is 1 trad or more
         
@@ -475,7 +363,8 @@ def post(source):
                 # if we change main translation
                 l_word[1],l_word[answer1]=l_word[answer1],l_word[1]
             
-            conn=sql.connect(current_dir + '/training2.db')
+            # we put the main translation at the first place in the translations
+            conn = sql.connect(current_dir + '/training2.db')
             cursor = conn.cursor()
             ida = cursor.execute(f"""
                                  Select id from {La} 
@@ -503,7 +392,7 @@ def post(source):
                     idb = idb + ','
             
             # we create a string containing the id for all the translation
-            #we want to add
+            # we want to add
                     
             try:
                 # we do not use add_trad because there was issues
@@ -534,7 +423,7 @@ def post(source):
         answer4 = str(input())
         if answer4 == 'yes':
             stat_train_updater(l_word[0], La, Lb, ida, idb)
-                
+        # we add stats to our translation for training
 
     pass 
 
@@ -544,6 +433,7 @@ def settings():
 import random
 
 def score_1(l):
+    # it will need an update for qcm integration in history and maybe groups
     """
 
     Parameters
@@ -555,7 +445,7 @@ def score_1(l):
     -------
     INT
         Score on a translation
-
+    
     """
     l=l.split(',')[:-1][::-1] #[:-1:-1] do not work 
     s=[0]
@@ -574,6 +464,10 @@ def score_1(l):
     return max(s),streak
 
 def status_gestion(history):
+    # it will need an update for qcm integration in history and maybe groups
+    """
+    it return the status and the next advised revision using history
+    """
     next_revision = time.time()
     score,streak = score_1(history)
     if score > 3.23:
@@ -621,34 +515,63 @@ def right_update(current,ind_trad):
     Returns
     -------
     current : List
-        updated version of current (with next_revision on ninth index)
+        updated version of current while answered correctly
+        (with next_revision on ninth index)
 
     """
     current[7] = current[7] + ' ,'
     
     if ind_trad == 0:
+        # the main trad was answered
         l_stats = current[4].split(',')
         ind_trad = l_stats.index(current[3].split(',')[0])
+        # ind_trad is now the index of the current main trad in l_stats
         l_stats[ind_trad + 1] = str(int(l_stats[ind_trad + 1]) + 1)
+        # we update the number of correct answer for current main trad
+        
         u_stats = l_stats[0] + ','
         for i in range (1,len(l_stats)-1):
             u_stats = u_stats + l_stats[i] + ','
         current[4] =  u_stats + l_stats[-1]
+        # current[4] is now the new C_main 
     else:
-        current[5] +=1
+        # another trads was answered
+        current[5] += 1
+        # we only increase other good answers
+        
     current[8],next_revision = status_gestion(current[7])
     current.append(next_revision)
     
     return current
 
 def false_update(current):
+    """
+    Update of stats while answered incorrectly
+    only history status and next_revision is updated
+    """
     current[7] = current[7] + ','
     current[8],next_revision = status_gestion(current[7])
     current.append(next_revision)
     return current
 
 def train(n):
-    conn=sql.connect(current_dir + '/training2.db')
+    """
+
+    Parameters
+    ----------
+    n : INT
+        The number of word we want to train.
+
+    Returns
+    -------
+    None
+        
+    Description
+    -----------
+    
+    
+    """
+    conn = sql.connect(current_dir + '/training2.db')
     cursor = conn.cursor()
     rows1 = cursor.execute(f"""
         Select la,lb,ida,idb,C_main,C_other,Total,Lastones,status,t.id_trad
@@ -656,6 +579,7 @@ def train(n):
         On t.id_trad = s.id_trad
         Where next_revision < {time.time()}
                    """).fetchall()
+    # trads with past advise revision
     rows2 = cursor.execute(f"""
         Select la,lb,ida,idb,C_main,C_other,Total,Lastones,status,t.id_trad
         from trad As t Join stats As s 
@@ -663,6 +587,7 @@ def train(n):
         Where next_revision > {time.time()}
         Order By next_revision 
                    """).fetchall()
+    # trads we will use when there is no longer trads with past advise revision
     
     conn.commit()
     conn.close()
@@ -671,6 +596,7 @@ def train(n):
     i=0
     while i < n:
         if i == len(rows1):
+            # while we arrive at the end of the past advise
             conn=sql.connect(current_dir + '/training2.db')
             cursor = conn.cursor()
             still_pasttime = cursor.execute(f"""
@@ -682,19 +608,21 @@ def train(n):
             if still_pasttime != []:
                 print("there is more urgent one")
                 return train(n-i)
+            # is there is new past time advise we restart the function
             conn.commit()
             conn.close()
         if i >= len(rows):
             print("not enough word in the db")
             return train (n-i) 
-        #this allow 
+        # if we want to train on more word than there is in training
         current = list(rows[i])
-        conn=sql.connect(current_dir + '/training2.db')
+        conn = sql.connect(current_dir + '/training2.db')
         cursor = conn.cursor()
         original_word = cursor.execute(f"""
                 Select word From {current[0]}
                 Where id = {current[2]}
                        """).fetchone()[0]
+        # original_word is the word associated to ida in La
         print(f"give a translation of {original_word} in {current[1]}")
         answer = str(input())
         words = current[3].split(',')
@@ -708,11 +636,14 @@ def train(n):
             t_words.append(t_w)
         conn.commit()
         conn.close()
+        # t_words contains all the words in idb in Lb
         try:
             current[6] += 1
             ind_trad = t_words.index(answer)
+        # we increase total and get the index of answer in t_words if the answer
+        # is a right one
         except ValueError:
-            
+            # if the user is wrong
             print("wrong spelling","the translations where :",sep='\n')
             for j in range(len(t_words)):
                 print(f"{j+1}) {t_words[j]}")
@@ -720,6 +651,7 @@ def train(n):
             try:
                 answer1 = int(input())
             except ValueError:
+                # if not an int
                 answer1 = None
                 current = false_update(current)
                 print(current)
@@ -728,9 +660,13 @@ def train(n):
                     current = right_update(current, answer1 - 1)
                     print(current)
                 else:
-                    pass
+                    # if the int is not associated with a proposed translation
+                    answer1 = None
+                    current = false_update(current)
+                    print(current)
             
         else:
+            # is the user was right with the spelling
             current = right_update(current, ind_trad)
             print(current)
         conn=sql.connect(current_dir + '/training2.db')
@@ -741,6 +677,7 @@ def train(n):
                     Lastones = '{current[7]}', next_revision = {current[10]}, status = '{current[8]}'
                 Where id_trad = {current[9]}
                 """)
+        # we updates the stats
         conn.commit()
         conn.close()
         print('\n')
