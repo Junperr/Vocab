@@ -3,7 +3,7 @@ Languages abbreviation
 English : en
 French : fr
 Spanish : es
-Japanese : jp
+Japanese : ja
 Korean : ko
 Chinese : zh
 German : de

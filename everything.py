@@ -6,7 +6,6 @@ Created on Tue Jun 14 10:05:28 2022
 """
 
 import sqlite3  as sql
-import urllib.request
 import os
 from automatic_translation import all_details
 import time
@@ -16,7 +15,7 @@ current_dir = os.getcwd()
 conn=sql.connect(current_dir + '/training2.db')
 cursor = conn.cursor()
 
-lg_code = ['en','fr','es','jp','ko','zh','de','nl','sv','ru','pt','pl',\
+lg_code = ['en','fr','es','ja','ko','zh','de','nl','sv','ru','pt','pl',\
           'ro','cz','gr','tr','is','ar','it','na']
 
 for x in lg_code:
@@ -332,8 +331,12 @@ def post(source):
         if len(l_word) == 1:
             # if the word don't already have translation
             trads = all_details(La,Lb,l_word[0])
-            for trad in trads:
-                l_word.append(trad)
+            if type(trads) == str:
+                print(trads)
+                pass
+            else:
+                for trad in trads:
+                    l_word.append(trad)
             # we add main trads for wordreference
         # l_word[0] is the word in La and l_word[1:] is the translation we have in Lb
         try: 
@@ -343,7 +346,7 @@ def post(source):
             try:
                 add_word(l_word[i],Lb)
             except:pass
-        # we add each word in the the their language table
+        # we add each word to their language table
         print(l_word)
         
         if len(l_word) >= 2:# if there is 1 trad or more
@@ -418,11 +421,11 @@ def post(source):
                 
                 trad,old_trad = Unique_error_handler(l_word[0], La, Lb, ida, idb)
             
-        print(trad)
-        print(f'do you to add the translation for {l_word[0]} to training ?','(yes or anything else)',sep='\n')
-        answer4 = str(input())
-        if answer4 == 'yes':
-            stat_train_updater(l_word[0], La, Lb, ida, idb)
+            print(trad)
+            print(f'do you to add the translation for {l_word[0]} to training ?','(yes or anything else)',sep='\n')
+            answer4 = str(input())
+            if answer4 == 'yes':
+                stat_train_updater(l_word[0], La, Lb, ida, idb)
         # we add stats to our translation for training
 
     pass 

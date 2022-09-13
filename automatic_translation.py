@@ -19,7 +19,7 @@ driver = webdriver.Chrome(service=service, options=option_driver)
 
 #%%
 
-lg_abvr = ['en','fr','es','jp','ko','zh','de','nl','sv','ru','pt','pl',\
+lg_abvr = ['en','fr','es','ja','ko','zh','de','nl','sv','ru','pt','pl',\
            'ro','cz','gr','tr','is','ar','it','na']
 lg = ['english','french','spainish','japanese','korean','chinese','german',\
       'dutch','swedish','russian','portuguese','polish','romanian','czech',\
@@ -29,7 +29,7 @@ lg = ['english','french','spainish','japanese','korean','chinese','german',\
 test_wrd = {'en': 'bord',
  'fr': 'table',
  'es': 'mesa',
- 'jp': 'テーブル',
+ 'ja': 'テーブル',
  'ko': '테이블',
  'chn': '桌子',
  'de': 'Tisch',
@@ -88,7 +88,7 @@ def suppr_parenthesis(text):
 
 default_dic = {'frword':'', 'toword':[], 'meaning':'', 'frex':'', 'toex':'', 'charac':{}}
 
-def eng_toword_chn(containers):
+def en_toword_zh(containers):
     """
 
     Parameters
@@ -98,11 +98,13 @@ def eng_toword_chn(containers):
 
     Returns
     -------
-    None.
+    List
+        the differents translations in a list
     
     Explanation
     -----------
     
+    A special function to recup translation while chinese is involved
 
     """
     Toword = containers.find_elements(by="xpath",\
@@ -123,14 +125,14 @@ def eng_toword_chn(containers):
                 child = child.nextSibling;
             }
             return ret;
-            """, x),sep='，')
+            """, x))
     # that's a script found on stackoverflow at 
     # https://stackoverflow.com/questions/12325454/how-to-get-text-of-an-element-in-selenium-webdriver-without-including-child-ele
     # it allow me to get the text on the node and not his child 
     # it's not needed whilde not in chinese due to the html structure
         try:
             pinyin = cut_multi_trad(x.find_element(by="xpath",\
-                            value="./span[@class='pinyintxt']").text,sep='，')
+                            value="./span[@class='pinyintxt']").text)
             # we get the pinyin trad if there is one
         except:
             # if there is no pinyin therefore there is no simplified chinese
@@ -151,10 +153,7 @@ def eng_toword_chn(containers):
                 for ind in range (len(pinyin)):
                     if pinyin[ind] != '': 
                         trads.append(f"Pinyin: {pinyin[ind]}")
-    trads_txt = ""
-    for i in range(len(trads)-1):
-        trads_txt = trads_txt + trads[i] + ','
-    return trads_txt + trads[-1]
+    return trads
 
 def cut_spaces(txt):
     """
@@ -180,12 +179,18 @@ def cut_spaces(txt):
         j+=1
     return temp
 
-def cut_multi_trad(txt,sep=','):
+def cut_multi_trad(txt,sep=[',','、','，']):
     """
     Return a list containing each element of txt separated by a coma
     each of them without begining and end spaces
     """
-    stock = txt.split(sep)
+    stock = []
+    more_word = 0
+    for i in range (len(sep)):
+        l = txt.split(sep[i])
+        if len(l) > more_word:
+            stock = l
+            more_word = len(l)
     for i in range (len(stock)):
         stock[i] = cut_spaces(stock[i])
     return stock
@@ -220,7 +225,7 @@ def recup_elem(La,Lb,containers):
     # meaning contain the context where the word is used
     if La == 'zh' or Lb == 'zh' :
         # Due to the multiple chinese dialect the site is structured differently
-        Toword = cut_multi_trad(eng_toword_chn(containers))
+        Toword = en_toword_zh(containers)
     else:
         Toword = cut_multi_trad(cut_first_charx(containers.find_element(by="xpath",\
             value="./td[@class='ToWrd']" ).get_attribute("innerHTML"), x='<', avoid = '\r')[0])
@@ -242,7 +247,7 @@ def other_lines(La,Lb,containers,current_trad):
     """
     try:# no error if it is other translation with the same meaning
         if La == 'zh' or Lb == 'zh':
-            add_toword = cut_multi_trad(eng_toword_chn(containers))
+            add_toword = en_toword_zh(containers)
             
         else:
             add_toword = cut_multi_trad(cut_first_charx(containers.find_element(by="xpath",\
@@ -287,6 +292,7 @@ def inv_swap(La,Lb,current_trad,word):
         # chinese is taken as an exeption because i add SC: before the word
         for x in current_trad['toword']:
             if word == cut_first_charx(x,' '):
+                # remove added prefix (SC: ,TC: ,pinyin: )
                 stock = current_trad['toex']
                 current_trad['toword'] = [current_trad['frword']]
                 current_trad['frword'] = word
@@ -354,7 +360,8 @@ def all_details(La,Lb,word):
         first_lg = temp_main[0].text
         # temp_main is empty if wordreference don't have data 
     except:
-        print(f"Wordreference doesn't have any data concerning {word} from {lg[lg_abvr.index(La)]} to {lg[lg_abvr.index(Lb)]}")
+        return f"Wordreference doesn't have any data concerning {word} from {lg[lg_abvr.index(La)]} to {lg[lg_abvr.index(Lb)]}"
+        # print(f"Wordreference doesn't have any data concerning {word} from {lg[lg_abvr.index(La)]} to {lg[lg_abvr.index(Lb)]}")
     for i in range (len(temp_main)):
         if temp_main[i].text == first_lg:
             good_main.append(temp_main[i]) 
